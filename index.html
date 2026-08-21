@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Habit Tracker</title>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#fff;--text:#182230;--muted:#687386;--line:#dce2ea;
+  --primary:#2563eb;--primary2:#1d4ed8;--success:#16a34a;--successBg:#dcfce7;
+  --danger:#dc2626;--dangerBg:#fee2e2;--week:#eef4ff;--shadow:0 8px 28px rgba(15,23,42,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{max-width:1600px;margin:auto;padding:20px}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.brand h1{margin:0;font-size:28px}
+.brand p{margin:5px 0 0;color:var(--muted);font-size:13px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn,.select,.input{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:9px 12px}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.danger{color:var(--danger)}
+.btn:hover{filter:brightness(.98);transform:translateY(-1px)}
+.dashboard{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+.stat-title{color:var(--muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.stat-value{font-size:27px;font-weight:800;margin-top:5px}
+.progress{height:9px;background:#e9edf3;border-radius:99px;overflow:hidden;margin-top:9px}
+.progress>i{display:block;height:100%;background:var(--primary);border-radius:inherit;transition:width .25s}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px}
+.tracker-card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.table-wrap{overflow:auto;max-height:72vh}
+table{border-collapse:separate;border-spacing:0;min-width:1100px;width:max-content}
+th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center;height:42px;padding:5px}
+thead th{position:sticky;top:0;background:#f8fafc;z-index:4;font-size:11px}
+.habit-col{position:sticky;left:0;z-index:5;width:210px;min-width:210px;text-align:left;background:var(--card)}
+thead .habit-col{z-index:7;background:#f8fafc}
+.goal-col{width:85px;min-width:85px}
+.pct-col{width:95px;min-width:95px}
+.day{width:40px;min-width:40px}
+.week-head{background:var(--week)!important;color:#1e40af;font-weight:800}
+.day-head{font-size:11px;color:var(--muted)}
+.today{box-shadow:inset 0 -3px 0 var(--primary)}
+.habit-name{font-weight:650;display:flex;align-items:center;gap:5px}
+.habit-inline{width:145px;min-width:0;border:1px solid transparent;background:transparent;color:var(--text);font-weight:650;border-radius:7px;padding:6px 5px;outline:none}
+.habit-inline:hover,.habit-inline:focus{border-color:var(--line);background:var(--bg)}
+.habit-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.add-row td{background:#f8fafc}
+.add-inline{display:flex;align-items:center;gap:6px}
+.add-inline input{width:145px;border:1px dashed #aeb8c6;border-radius:7px;padding:6px 7px;background:var(--card);color:var(--text)}
+.add-inline button{border:1px solid var(--primary);background:var(--primary);color:#fff;border-radius:7px;padding:6px 9px;font-weight:700}
+
+.edit-habit{border:0;background:transparent;padding:3px;color:var(--muted)}
+.cell{width:31px;height:31px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;color:#fff;transition:.15s}
+.cell:hover{border-color:var(--primary);transform:scale(1.04)}
+.cell.done{background:var(--success);border-color:var(--success)}
+.cell.missed{background:var(--danger);border-color:var(--danger)}
+.cell.future{opacity:.4;cursor:not-allowed}
+.pct{font-weight:800}
+tfoot td{background:#f8fafc;font-weight:750}
+.sidebar{display:flex;flex-direction:column;gap:14px}
+.side-title{font-weight:800;margin-bottom:10px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.dot{width:13px;height:13px;border-radius:4px;border:1px solid #cbd5e1;background:#fff}
+.dot.done{background:var(--success);border-color:var(--success)}
+.dot.missed{background:var(--danger);border-color:var(--danger)}
+canvas{width:100%;height:210px}
+.month-nav{display:flex;align-items:center;gap:8px}
+.month-nav strong{min-width:150px;text-align:center}
+.empty{text-align:center;color:var(--muted);padding:25px}
+.small{font-size:12px;color:var(--muted)}
+.modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.modal{background:var(--card);width:min(480px,100%);border-radius:16px;padding:20px;box-shadow:0 20px 70px rgba(0,0,0,.2)}
+.modal h2{margin:0 0 6px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+
+.firebase-status{font-size:12px;padding:5px 8px;border-radius:7px}
+body.dark{--bg:#0f172a;--card:#111827;--text:#e5e7eb;--muted:#94a3b8;--line:#263244;--week:#172554}
+body.dark thead th,body.dark tfoot td{background:#17202f}
+body.dark .cell{background:#0f172a;border-color:#334155}
+body.dark .progress{background:#263244}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}.dashboard{grid-template-columns:repeat(2,1fr)}.sidebar{display:grid;grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.app{padding:10px}.dashboard{grid-template-columns:1fr 1fr}.sidebar{display:block}.brand h1{font-size:22px}}
+@media print{
+  .controls,.sidebar,.btn,.modal-backdrop{display:none!important}
+  body{background:#fff}.app{max-width:none;padding:0}.tracker-card{box-shadow:none;border:0}
+  .table-wrap{max-height:none;overflow:visible}table{min-width:0;width:100%}.day{width:28px;min-width:28px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand">
+    <h1>📋 Habit Tracker</h1>
+    <p>Spreadsheet-style daily, weekly and monthly habit progress</p>
+  </div>
+  <div class="controls">
+    <div class="month-nav">
+      <button class="btn" id="prevMonth">‹</button>
+      <strong id="monthLabel"></strong>
+      <button class="btn" id="nextMonth">›</button>
+    </div>
+    <button class="btn" id="todayBtn">Today</button>
+    <button class="btn" id="addHabit">＋ Habit</button>
+    <button class="btn" id="exportBtn">Export CSV</button>
+    <button class="btn" id="printBtn">Print</button>
+    <button class="btn" id="firebaseBtn">☁ Firebase: Not Connected</button>
+    <button class="btn" id="themeBtn">☾</button>
+  </div>
+</header>
+
+<section class="dashboard">
+  <div class="card"><div class="stat-title">Monthly Progress</div><div class="stat-value" id="monthlyPct">0%</div><div class="progress"><i id="monthlyBar"></i></div></div>
+  <div class="card"><div class="stat-title">Completed Today</div><div class="stat-value" id="todayDone">0 / 0</div><div class="small" id="todayLabel"></div></div>
+  <div class="card"><div class="stat-title">Best Week</div><div class="stat-value" id="bestWeek">0%</div><div class="small" id="bestWeekLabel"></div></div>
+  <div class="card"><div class="stat-title">Total Habits</div><div class="stat-value" id="habitCount">0</div><div class="small">Add unlimited habits directly in the table</div></div>
+</section>
+
+<div class="layout">
+  <main class="tracker-card">
+    <div class="table-wrap">
+      <table id="tracker"></table>
+    </div>
+  </main>
+
+  <aside class="sidebar">
+    <div class="card">
+      <div class="side-title">Weekly Progress</div>
+      <canvas id="weekChart"></canvas>
+    </div>
+    <div class="card">
+      <div class="side-title">Monthly Overview</div>
+      <canvas id="monthChart"></canvas>
+    </div>
+    <div class="card">
+      <div class="side-title">Legend</div>
+      <div class="legend">
+        <span><i class="dot done"></i> Done</span>
+        <span><i class="dot"></i> Not done</span>
+        <span><i class="dot missed"></i> Missed</span>
+      </div>
+      <p class="small" style="margin-bottom:0">Click a daily cell to mark a habit complete. Click again to clear it. Use right-click to mark a day as missed.</p>
+    </div>
+  </aside>
+</div>
+</div>
+
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <h2 id="modalTitle">Add Habit</h2>
+    <p class="small">Enter the habit name and optional monthly goal.</p>
+    <input class="input" id="habitInput" placeholder="e.g. Exercise" style="width:100%;margin-top:10px">
+    <input class="input" id="goalInput" type="number" min="1" max="31" placeholder="Goal days (e.g. 20)" style="width:100%;margin-top:8px">
+    <div class="modal-actions">
+      <button class="btn" id="cancelModal">Cancel</button>
+      <button class="btn primary" id="saveHabit">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const INITIAL_HABITS = ["(Month) 2026 Habit Tracker", "Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Dates", "1.0", "2.0", "3.0"];
+const STORAGE_KEY = "single-file-habit-tracker-v1";
+const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {
+  habits: INITIAL_HABITS.map((name,i)=>({id:crypto.randomUUID?.()||String(Date.now()+i),name,goal:20,days:{}})),
+  theme:"light"
+};
+let view = new Date();
+view.setDate(1);
+let editingId = null;
+
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
+function daysInMonth(y,m){return new Date(y,m+1,0).getDate();}
+function dateKey(y,m,d){return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;}
+function isFuture(y,m,d){return new Date(y,m,d,23,59,59) > new Date();}
+function percent(a,b){return b ? Math.round(a/b*100) : 0;}
+function weeksForMonth(y,m){
+  const n=daysInMonth(y,m), out=[];
+  for(let d=1;d<=n;d+=7) out.push([d,Math.min(d+6,n)]);
+  return out;
+}
+function weekProgress(week){
+  let total=0,done=0;
+  state.habits.forEach(h=>{for(let d=week[0];d<=week[1];d++){total++; if(h.days[dateKey(view.getFullYear(),view.getMonth(),d)]==="done")done++;}});
+  return percent(done,total);
+}
+function habitProgress(h){
+  const n=daysInMonth(view.getFullYear(),view.getMonth());
+  let done=0;
+  for(let d=1;d<=n;d++) if(h.days[dateKey(view.getFullYear(),view.getMonth(),d)]==="done") done++;
+  return percent(done,n);
+}
+function monthProgress(){
+  let done=0,total=0,n=daysInMonth(view.getFullYear(),view.getMonth());
+  state.habits.forEach(h=>{for(let d=1;d<=n;d++){total++;if(h.days[dateKey(view.getFullYear(),view.getMonth(),d)]==="done")done++;}});
+  return percent(done,total);
+}
+function render(){
+  const y=view.getFullYear(),m=view.getMonth(),n=daysInMonth(y,m);
+  document.getElementById("monthLabel").textContent=view.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+  document.getElementById("habitCount").textContent=state.habits.length;
+  const mp=monthProgress();
+  document.getElementById("monthlyPct").textContent=mp+"%";
+  document.getElementById("monthlyBar").style.width=mp+"%";
+
+  const today=new Date();
+  let todayDone=0;
+  state.habits.forEach(h=>{if(h.days[dateKey(y,m,today.getDate())]==="done" && today.getFullYear()===y && today.getMonth()===m)todayDone++;});
+  document.getElementById("todayDone").textContent=`${todayDone} / ${state.habits.length}`;
+  document.getElementById("todayLabel").textContent=today.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
+
+  const weeks=weeksForMonth(y,m);
+  const wp=weeks.map(weekProgress);
+  const best=Math.max(0,...wp),bi=wp.indexOf(best);
+  document.getElementById("bestWeek").textContent=best+"%";
+  document.getElementById("bestWeekLabel").textContent=weeks[bi]?`Week ${bi+1} (${weeks[bi][0]}–${weeks[bi][1]})`:"";
+
+  let html="<thead><tr><th class='habit-col'>Habit</th><th class='goal-col'>Goal</th>";
+  weeks.forEach((w,i)=>html+=`<th class="week-head" colspan="${w[1]-w[0]+1}">WEEK ${i+1}</th>`);
+  html+="<th class='pct-col'>Progress</th></tr><tr><th class='habit-col'>Daily completion</th><th class='goal-col'>Days</th>";
+  for(let d=1;d<=n;d++){
+    const dt=new Date(y,m,d);
+    const cls=(dt.toDateString()===today.toDateString())?"today":"";
+    html+=`<th class="day day-head ${cls}">${DAYS[dt.getDay()]}<br>${d}</th>`;
+  }
+  html+="<th class='pct-col'>%</th></tr></thead><tbody>";
+
+  state.habits.forEach((h,idx)=>{
+    html+=`<tr><td class="habit-col">
+  <div class="habit-name">
+    <input class="habit-inline" value="${escapeAttr(h.name)}"
+      onchange="renameInline('${h.id}',this.value)"
+      onkeydown="if(event.key==='Enter'){this.blur()}"
+      aria-label="Habit name">
+    <button class="edit-habit" onclick="editHabit('${h.id}')" title="Edit goal">✎</button>
+    <button class="edit-habit" onclick="deleteHabit('${h.id}')" title="Delete habit">×</button>
+  </div>
+</td><td class="goal-col">${h.goal||0}</td>`;
+    for(let d=1;d<=n;d++){
+      const key=dateKey(y,m,d),v=h.days[key]||"";
+      const dt=new Date(y,m,d),future=isFuture(y,m,d);
+      const cls=v==="done"?"done":v==="missed"?"missed":future?"future":"";
+      html+=`<td class="day ${dt.toDateString()===today.toDateString()?"today":""}"><button class="cell ${cls}" ${future?"disabled":""} onclick="toggleDay('${h.id}',${d})" oncontextmenu="markMissed(event,'${h.id}',${d})" aria-label="${escapeHtml(h.name)} day ${d}">${v==="done"?"✓":v==="missed"?"×":""}</button></td>`;
+    }
+    html+=`<td class="pct-col pct">${habitProgress(h)}%</td></tr>`;
+  });
+
+  html+=`<tr class="add-row">
+    <td class="habit-col">
+      <div class="add-inline">
+        <input id="inlineHabitInput" placeholder="Add your habit..." onkeydown="if(event.key==='Enter')addInlineHabit()">
+        <button onclick="addInlineHabit()">＋ Add</button>
+      </div>
+    </td>
+    <td class="goal-col">—</td>
+    ${Array.from({length:n},()=>"<td class='day'></td>").join("")}
+    <td class="pct-col">—</td>
+  </tr>`;
+  html+="</tbody><tfoot><tr><td class='habit-col'>WEEKLY PROGRESS</td><td></td>";
+  for(let d=1;d<=n;d++){
+    const wi=weeks.findIndex(w=>d>=w[0]&&d<=w[1]);
+    const isLast=d===weeks[wi][1];
+    html+=isLast?`<td class="day" colspan="1" style="font-size:11px">${wp[wi]}%</td>`:"<td class='day'></td>";
+  }
+  html+=`<td class='pct-col'>${mp}%</td></tr></tfoot>`;
+  document.getElementById("tracker").innerHTML=html;
+  drawCharts(wp);
+  save();
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
+function toggleDay(id,d){
+  const h=state.habits.find(x=>x.id===id); if(!h)return;
+  const k=dateKey(view.getFullYear(),view.getMonth(),d);
+  h.days[k]=h.days[k]==="done"?"":"done";
+  render();
+}
+function markMissed(e,id,d){
+  e.preventDefault();
+  const h=state.habits.find(x=>x.id===id); if(!h)return;
+  h.days[dateKey(view.getFullYear(),view.getMonth(),d)]="missed";
+  render();
+}
+function escapeAttr(s){
+  return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function renameInline(id,value){
+  const h=state.habits.find(x=>x.id===id);
+  if(!h)return;
+  const name=value.trim();
+  if(name) h.name=name;
+  else value=h.name;
+  save();
+  render();
+}
+function addInlineHabit(){
+  const input=document.getElementById("inlineHabitInput");
+  if(!input)return;
+  const name=input.value.trim();
+  if(!name){input.focus();return;}
+  const n=daysInMonth(view.getFullYear(),view.getMonth());
+  state.habits.push({
+    id:crypto.randomUUID?.()||String(Date.now()),
+    name,
+    goal:n,
+    days:{}
+  });
+  render();
+  setTimeout(()=>{
+    const el=document.getElementById("inlineHabitInput");
+    if(el){el.focus();el.select();}
+  },0);
+}
+function deleteHabit(id){
+  const h=state.habits.find(x=>x.id===id);
+  if(h && confirm(`Delete "${h.name}"?`)){state.habits=state.habits.filter(x=>x.id!==id);render();}
+}
+function editHabit(id){
+  const h=state.habits.find(x=>x.id===id); if(!h)return;
+  editingId=id;
+  document.getElementById("modalTitle").textContent="Edit Habit";
+  document.getElementById("habitInput").value=h.name;
+  document.getElementById("goalInput").value=h.goal||20;
+  document.getElementById("modal").style.display="flex";
+  setTimeout(()=>document.getElementById("habitInput").focus(),50);
+}
+function openAdd(){
+  editingId=null;
+  document.getElementById("modalTitle").textContent="Add Habit";
+  document.getElementById("habitInput").value="";
+  document.getElementById("goalInput").value=20;
+  document.getElementById("modal").style.display="flex";
+  setTimeout(()=>document.getElementById("habitInput").focus(),50);
+}
+document.getElementById("addHabit").onclick=openAdd;
+document.getElementById("cancelModal").onclick=()=>document.getElementById("modal").style.display="none";
+document.getElementById("saveHabit").onclick=()=>{
+  const name=document.getElementById("habitInput").value.trim();
+  const goal=Math.max(1,Math.min(daysInMonth(view.getFullYear(),view.getMonth()),Number(document.getElementById("goalInput").value)||20));
+  if(!name)return;
+  if(editingId){const h=state.habits.find(x=>x.id===editingId);h.name=name;h.goal=goal;}
+  else state.habits.push({id:crypto.randomUUID?.()||String(Date.now()),name,goal,days:{}});
+  document.getElementById("modal").style.display="none";render();
+};
+document.getElementById("prevMonth").onclick=()=>{view.setMonth(view.getMonth()-1);render()};
+document.getElementById("nextMonth").onclick=()=>{view.setMonth(view.getMonth()+1);render()};
+document.getElementById("todayBtn").onclick=()=>{view=new Date();view.setDate(1);render()};
+document.getElementById("printBtn").onclick=()=>window.print();
+document.getElementById("themeBtn").onclick=()=>{state.theme=state.theme==="dark"?"light":"dark";document.body.classList.toggle("dark",state.theme==="dark");save()};
+document.body.classList.toggle("dark",state.theme==="dark");
+
+document.getElementById("exportBtn").onclick=()=>{
+  const y=view.getFullYear(),m=view.getMonth(),n=daysInMonth(y,m);
+  const header=["Habit","Goal",...Array.from({length:n},(_,i)=>i+1),"Progress"];
+  const lines=[header];
+  state.habits.forEach(h=>lines.push([h.name,h.goal,...Array.from({length:n},(_,i)=>h.days[dateKey(y,m,i+1)]==="done"?"✓":h.days[dateKey(y,m,i+1)]==="missed"?"×":""),habitProgress(h)+"%"]));
+  const csv=lines.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=`habit-tracker-${y}-${String(m+1).padStart(2,"0")}.csv`;a.click();
+};
+
+function drawCharts(weekly){
+  const c=document.getElementById("weekChart"),ctx=c.getContext("2d"),dpr=devicePixelRatio||1;
+  c.width=c.clientWidth*dpr;c.height=210*dpr;ctx.scale(dpr,dpr);
+  const w=c.clientWidth,h=210;
+  ctx.clearRect(0,0,w,h);ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue("--line");ctx.fillStyle=getComputedStyle(document.body).getPropertyValue("--muted");ctx.font="11px system-ui";
+  const pad=28,bw=(w-pad*2)/weekly.length-12;
+  weekly.forEach((v,i)=>{const x=pad+i*((w-pad*2)/weekly.length)+6,bh=(h-55)*v/100;ctx.fillStyle=getComputedStyle(document.body).getPropertyValue("--primary");ctx.fillRect(x,h-30-bh,bw,bh);ctx.fillStyle=getComputedStyle(document.body).getPropertyValue("--muted");ctx.fillText("W"+(i+1),x,h-12);ctx.fillText(v+"%",x,h-35-bh)});
+  const mc=document.getElementById("monthChart"),mx=mc.getContext("2d");mc.width=mc.clientWidth*dpr;mc.height=210*dpr;mx.scale(dpr,dpr);
+  mx.clearRect(0,0,mc.clientWidth,210);
+  const vals=Array.from({length:daysInMonth(view.getFullYear(),view.getMonth())},(_,i)=>{let done=0,total=0;state.habits.forEach(h=>{total++;if(h.days[dateKey(view.getFullYear(),view.getMonth(),i+1)]==="done")done++});return percent(done,total)});
+  const left=28,top=20,bottom=35,right=10,pw=mc.clientWidth-left-right,ph=210-top-bottom;
+  mx.strokeStyle=getComputedStyle(document.body).getPropertyValue("--line");mx.beginPath();mx.moveTo(left,top);mx.lineTo(left,top+ph);mx.lineTo(left+pw,top+ph);mx.stroke();
+  mx.strokeStyle=getComputedStyle(document.body).getPropertyValue("--primary");mx.lineWidth=2;mx.beginPath();
+  vals.forEach((v,i)=>{const x=left+i*(pw/Math.max(1,vals.length-1)),y=top+ph-(v/100)*ph;i?mx.lineTo(x,y):mx.moveTo(x,y)});mx.stroke();
+}
+window.addEventListener("resize",()=>drawCharts(weeksForMonth(view.getFullYear(),view.getMonth()).map(weekProgress)));
+
+// ---------------- Firebase Realtime Database sync ----------------
+// The entire tracker state is stored under /habitTracker/state.
+// Every browser connected to the same Firebase database receives updates.
+let firebaseConnected = false;
+let firebaseApplyingRemote = false;
+
+function setFirebaseButton(text){
+  const b=document.getElementById("firebaseBtn");
+  if(b) b.textContent=text;
+}
+
+async function uploadToFirebase(){
+  if(!firebaseConnected || !window.firebaseDB || !window.firebaseRef || !window.firebaseSet) return;
+  if(firebaseApplyingRemote) return;
+  try{
+    await window.firebaseSet(window.firebaseRef(window.firebaseDB,"habitTracker/state"), {
+      habits: state.habits,
+      theme: state.theme,
+      updatedAt: Date.now()
+    });
+    setFirebaseButton("☁ Firebase: Synced");
+    clearTimeout(cloudTimer);
+    cloudTimer=setTimeout(()=>setFirebaseButton("☁ Firebase: Connected"),1200);
+  }catch(err){
+    console.error(err);
+    setFirebaseButton("☁ Firebase: Error");
+  }
+}
+
+function startFirebaseSync(){
+  if(!window.firebaseDB || !window.firebaseRef || !window.firebaseOnValue) return;
+  firebaseConnected=true;
+  setFirebaseButton("☁ Firebase: Connected");
+
+  const stateRef=window.firebaseRef(window.firebaseDB,"habitTracker/state");
+  window.firebaseOnValue(stateRef,(snapshot)=>{
+    const remote=snapshot.val();
+    if(!remote || !Array.isArray(remote.habits)) return;
+
+    firebaseApplyingRemote=true;
+    state.habits=remote.habits;
+    if(remote.theme) state.theme=remote.theme;
+    document.body.classList.toggle("dark",state.theme==="dark");
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+    render();
+    firebaseApplyingRemote=false;
+    setFirebaseButton("☁ Firebase: Synced");
+  },(error)=>{
+    console.error("Firebase read error:",error);
+    setFirebaseButton("☁ Firebase: Read Error");
+  });
+}
+
+document.addEventListener("firebase-ready",()=>{
+  startFirebaseSync();
+  setTimeout(()=>uploadToFirebase(),300);
+});
+document.addEventListener("firebase-not-configured",()=>{
+  setFirebaseButton("☁ Firebase: Add Config");
+});
+document.addEventListener("firebase-error",()=>{
+  setFirebaseButton("☁ Firebase: Error");
+});
+
+// Wrap render so every local change is also saved to Firebase.
+const originalRender=render;
+render=function(){
+  originalRender();
+  if(firebaseConnected && !firebaseApplyingRemote) uploadToFirebase();
+};
+
+document.getElementById("firebaseBtn").onclick=()=>{
+  alert(
+`Firebase is ready in this file, but your project configuration must be inserted.
+
+1. Open Firebase Console.
+2. Create/open your project.
+3. Add a Web App.
+4. Create Realtime Database.
+5. Copy the firebaseConfig object.
+6. Replace the PASTE_* values near the bottom of index.html.
+7. Open the app using a local web server (for example VS Code Live Server).
+
+Do not paste a service-account private key into index.html.`
+  );
+};
+
+render();
+</script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+
+  // Paste the config from Firebase Console > Project settings > Your apps > Web app.
+  // Do NOT put a service-account/private key here.
+  const firebaseConfig = {
+    apiKey: "PASTE_API_KEY",
+    authDomain: "student-data-28f6d.firebaseapp.com",
+    databaseURL: "https://student-data-28f6d-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "student-data-28f6d",
+    storageBucket: "student-data-28f6d.firebasestorage.app",
+    messagingSenderId: "347889644058",
+    appId: "1:347889644058:web:214a5092855e4e524f17a3"
+  };
+
+  let firebaseReady = false;
+  let db = null;
+  let cloudTimer = null;
+
+  try {
+    if (firebaseConfig.apiKey !== "PASTE_API_KEY" && firebaseConfig.databaseURL.includes("firebase")) {
+      const app = initializeApp(firebaseConfig);
+      db = getDatabase(app);
+      firebaseReady = true;
+      window.firebaseDB = db;
+      window.firebaseRef = ref;
+      window.firebaseSet = set;
+      window.firebaseOnValue = onValue;
+      document.dispatchEvent(new CustomEvent("firebase-ready"));
+    } else {
+      document.dispatchEvent(new CustomEvent("firebase-not-configured"));
+    }
+  } catch (err) {
+    console.error("Firebase initialization failed:", err);
+    document.dispatchEvent(new CustomEvent("firebase-error", {detail: err.message}));
+  }
+</script>
+
+</body>
+</html>
